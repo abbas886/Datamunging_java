@@ -14,22 +14,46 @@ import com.stackroute.query.parser.QueryParameter;
 public interface EvaluateEngine {
 	
 	public ResultSet evaluate(QueryParameter queryParameter);
+
+	public default BufferedReader getBufferedReader(QueryParameter queryParameter) {
+		try {
+			
+			BufferedReader reader = new BufferedReader(new FileReader(queryParameter.getFile()));
+			// read header
+			reader.readLine();
+			return reader;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+
+	}
+
+	public default List<String> getRecord(BufferedReader reader) {
+		try {
+			String line;
+			if((line =reader.readLine())!=null)
+			{
+				return	Arrays.asList(line.split(","));
+			}
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+
+	}
 	
-	
-	 default List<String> getHeader(String file)
-	 {
-				try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-
-					String line;
-					if ((line = br.readLine()) != null) {
-						return Arrays.asList(line.split(","));
-					}
-
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			return null;
-
-	 }
+	public default void closeFile(BufferedReader reader)
+	{
+		try {
+			reader.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 }

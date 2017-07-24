@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import com.stackroute.datamunging.ResultSet;
 import com.stackroute.query.parser.AggregateFunction;
@@ -11,61 +12,104 @@ import com.stackroute.query.parser.QueryParameter;
 
 public class EvaluateAggregateClause implements EvaluateEngine {
 	private List<String> record;
+	List<AggregateFunction> aggregates;
+	private BufferedReader reader;
 
-		@Override
+	@Override
 	public ResultSet evaluate(QueryParameter queryParameter) {
-			
-			int count =0,sum=0,max,min,avg;
-			
-			//AggregateFunction aggregateFunction = new AggregateFunction();
-		     String aggregateFunction;
-			 String aggregateField;
-			try (BufferedReader reader = new BufferedReader(new FileReader(queryParameter.getFile()))) {
-			// read header
-			reader.readLine().split(",");
-			// read the remaining records
-		
-			List<AggregateFunction> aggregates = queryParameter.getAggregateFunctions();
-			
-			
-			while ((reader.readLine()) != null) {
-				record = Arrays.asList(reader.readLine().split(","));
-				for(AggregateFunction aggregate:aggregates)
-				{
-				
-					aggregateFunction = aggregate.getFunction();
-					aggregateField = aggregate.getField();
-		            int aggregateFieldIndex = aggregate.getAggregateFieldIndex();
-					switch (aggregateFunction) {
-					case "count":
-						         count = count + Integer.parseInt(record.get(aggregateFieldIndex));
-						break;
-					case "min":
 
-						break;
-					case "max":
+		aggregates = queryParameter.getAggregateFunctions();
+		Map<String, Integer> header = queryParameter.getHeader();
+		reader = getBufferedReader(queryParameter);
+		// read first record and set to min, max, sum
+		initializeAggregates(reader, aggregates, header);
+		// find min, max, sum and count based on given aggregate function
+		calclulateAggregates(reader, aggregates, header);
 
-						break;
-					case "avg":
-
-						break;
-					case "sum":
-
-						break;
-
-					}
-
-				}
-
-			}
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-			
-		return null;
+		ResultSet resultSet = new ResultSet();
+		resultSet.setAggregateFunctions(aggregates);
+		closeFile(reader);
+		return resultSet;
 	}
 
-	
-	
+	private List<AggregateFunction> calclulateAggregates(BufferedReader reader, List<AggregateFunction> aggregates,
+			Map<String, Integer> header) {
+		String field;
+		int currentValue = 0;
+		int count =1;
+		int sum=0;
+		AggregateFunction currentAggregate = null;
+		while ((record = getRecord(reader)) != null) {
+			for (AggregateFunction aggregate : aggregates) {
+				currentAggregate = aggregate;
+				if (aggregate.getField().equals("*")) {
+					field = "*";
+				} else {
+					field = record.get(header.get(aggregate.getField()));
+				}
+
+				// convert to integer if it contains all digits
+				if (field.matches("\\d+")) {
+					currentValue = Integer.parseInt(field);
+				}
+				switch (aggregate.getFunction()) {
+				case "count":
+					if (!field.isEmpty())
+						aggregate.setResult(aggregate.getResult() + 1);
+					count = aggregate.getResult();
+
+					break;
+				case "min":
+					if (aggregate.getResult() > currentValue) {
+						aggregate.setResult(currentValue);
+					}
+					break;
+				case "max":
+					if (aggregate.getResult() < currentValue) {
+						aggregate.setResult(currentValue);
+					}
+
+					break;
+				case "sum":
+					aggregate.setResult(aggregate.getResult() + currentValue);
+					sum = aggregate.getResult();
+					break;
+					
+				case "avg":
+					//not satisfied this logic. need to think
+					aggregate.setResult((aggregate.getResult() + currentValue)/count++);
+			
+				}
+				
+
+			}
+			
+		}
+		return aggregates;
+
+	}
+
+	/**
+	 * Set count = 1 Set min, max, sum as first record value
+	 * 
+	 * @param reader
+	 * @param aggregates
+	 */
+	private void initializeAggregates(BufferedReader reader, List<AggregateFunction> aggregates,
+			Map<String, Integer> header) {
+		List<String> record = getRecord(reader);
+		for (AggregateFunction aggregate : aggregates) {
+			switch (aggregate.getFunction()) {
+			case "count":
+				aggregate.setResult(1);
+				break;
+			case "min":
+			case "max":
+			case "sum":
+				aggregate.setResult(Integer.parseInt(record.get(header.get(aggregate.getField()))));
+
+			}
+		}
+	}
+
 }

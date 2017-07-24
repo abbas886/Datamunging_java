@@ -15,6 +15,7 @@ public class EvaluateOrderByClause implements EvaluateEngine {
 	private ResultSet resultSet;
 	private List<String> record;
 	private FilterHandler filterHandler;
+	private BufferedReader reader;
 
 	@Override
 	public ResultSet evaluate(QueryParameter queryParameter) {
@@ -25,31 +26,19 @@ public class EvaluateOrderByClause implements EvaluateEngine {
 		List<String> selectedFields = queryParameter.getFields();
 		List<String> orderByFields = queryParameter.getOrderByFields();
 		String orderByField = orderByFields.get(0); // presently working with
-													// only one order clause
+													// only one order by clause
 		int orderByFieldIndex = queryParameter.getHeader().get(orderByField);
-		try (BufferedReader reader = new BufferedReader(new FileReader(queryParameter.getFile()))) {
-			// read header
-			reader.readLine().split(",");
-			String line;
-			// read the remaining records
-			while ((line = reader.readLine()) != null) {
-				record = Arrays.asList(line.split(","));
-				if (!selectedFields.get(0).equals("*")) {
-					record = filterHandler.filterFields(queryParameter, record);
-				}
-				if(result.isEmpty())
-				{
-					result.add(record);  //add first record
-					continue;
-				}
 
-				insertionSort(result, record, orderByFieldIndex);
-
+		boolean requiredAllFields = selectedFields.get(0).equals("*");
+		reader = getBufferedReader(queryParameter);
+		// get first record
+		result.add(getRecord(reader));
+		while ((record = getRecord(reader)) != null) {
+			if (!requiredAllFields) {
+				record = filterHandler.filterFields(queryParameter, record);
 			}
+			insertionSort(result, record, orderByFieldIndex);
 
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 		resultSet.setResult(result);
 
@@ -63,19 +52,17 @@ public class EvaluateOrderByClause implements EvaluateEngine {
 	 * @param orderByFieldIndex
 	 */
 	private void insertionSort(List<List<String>> result, List<String> record, int orderByFieldIndex) {
-		
-		for(int position =0; position<result.size();position++)
-		{
+
+		for (int position = 0; position < result.size(); position++) {
 			try {
-				//if it is integer field
-				if(Integer.parseInt(result.get(position).get(orderByFieldIndex))< Integer.parseInt(record.get(orderByFieldIndex)))
-				{
+				// if it is integer field
+				if (Integer.parseInt(result.get(position).get(orderByFieldIndex)) < Integer
+						.parseInt(record.get(orderByFieldIndex))) {
 					result.add(position, record);
 					break;
 				}
 			} catch (NumberFormatException e) {
-				if(result.get(position).get(orderByFieldIndex).compareTo(record.get(orderByFieldIndex))<0)
-				{
+				if (result.get(position).get(orderByFieldIndex).compareTo(record.get(orderByFieldIndex)) < 0) {
 					result.add(position, record);
 					break;
 				}

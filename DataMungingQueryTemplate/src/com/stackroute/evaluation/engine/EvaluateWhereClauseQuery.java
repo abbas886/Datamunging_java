@@ -18,6 +18,7 @@ public class EvaluateWhereClauseQuery implements EvaluateEngine {
 	private List<String> record;
 	private Map<String, Integer> header;
 	private FilterHandler filterHandler;
+	private BufferedReader reader;
 
 	@Override
 	public ResultSet evaluate(QueryParameter queryParameter) {
@@ -28,14 +29,8 @@ public class EvaluateWhereClauseQuery implements EvaluateEngine {
 		List<String> selectedFields = queryParameter.getFields();
 		
 		
-			try (BufferedReader reader = new BufferedReader(new FileReader(queryParameter.getFile()))) {
-			//read header
-			reader.readLine().split(",");
-			String line;
-			// read the remaining records
-			while ((line =reader.readLine()) != null) {
-				record = Arrays.asList(line.split(","));
-				
+		reader = getBufferedReader(queryParameter);
+		while ((record = getRecord(reader)) != null) {
 				if(!selectedFields.get(0).equals("*"))
 				{
 					record=filterHandler.filterFields(queryParameter,record);
@@ -50,11 +45,8 @@ public class EvaluateWhereClauseQuery implements EvaluateEngine {
 
 			}
 
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-			resultSet.setResult(result);
+		resultSet.setResult(result);
+		closeFile(reader);
 		return resultSet;
 	}
 

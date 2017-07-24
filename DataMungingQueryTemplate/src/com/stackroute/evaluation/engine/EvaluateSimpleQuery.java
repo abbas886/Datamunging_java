@@ -17,39 +17,49 @@ public class EvaluateSimpleQuery implements EvaluateEngine {
 	private List<String> record;
 	private FilterHandler filterHandler;
 
+	private BufferedReader reader;
+
 	@Override
 	public ResultSet evaluate(QueryParameter queryParameter) {
+		filterHandler = new FilterHandler();
 		resultSet = new ResultSet();
-		filterHandler=new FilterHandler();
-		
-		List<List<String>> result = new ArrayList<List<String>>();
 		List<String> selectedFields = queryParameter.getFields();
-		
-			try (BufferedReader reader = new BufferedReader(new FileReader(queryParameter.getFile()))) {
-			//read header
-			reader.readLine().split(",");
-			String line;
-			// read the remaining records
-			while ((line =reader.readLine()) != null) {
-				record = Arrays.asList(line.split(","));
-				if(!selectedFields.get(0).equals("*"))
-				{
-					record=filterHandler.filterFields(queryParameter,record);
-				}
-				
-					result.add(record);
-			
+		List<List<String>> result = new ArrayList<List<String>>();
+		reader = getBufferedReader(queryParameter);
+		while ((record = getRecord(reader)) != null) {
+			if (!selectedFields.get(0).equals("*")) {
+				record = filterHandler.filterFields(queryParameter, record);
 			}
 
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			result.add(record);
+
 		}
-			resultSet.setResult(result);
+
+		resultSet.setResult(result);
+		closeFile(reader);
 		return resultSet;
 	}
 
-	
-	
+	/*
+	 * @Override public ResultSet evaluate(QueryParameter queryParameter) {
+	 * resultSet = new ResultSet(); filterHandler=new FilterHandler();
+	 * 
+	 * List<List<String>> result = new ArrayList<List<String>>(); List<String>
+	 * selectedFields = queryParameter.getFields();
+	 * 
+	 * try (BufferedReader reader = new BufferedReader(new
+	 * FileReader(queryParameter.getFile()))) { //read header
+	 * reader.readLine().split(","); String line; // read the remaining records
+	 * while ((line =reader.readLine()) != null) { record =
+	 * Arrays.asList(line.split(",")); if(!selectedFields.get(0).equals("*")) {
+	 * record=filterHandler.filterFields(queryParameter,record); }
+	 * 
+	 * result.add(record);
+	 * 
+	 * }
+	 * 
+	 * } catch (Exception e) { // TODO Auto-generated catch block
+	 * e.printStackTrace(); } resultSet.setResult(result); return resultSet; }
+	 */
 
 }

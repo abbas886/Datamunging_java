@@ -26,9 +26,7 @@ public class Query {
 	private QueryParser queryParser;
 	
 	private EvaluateEngine evaluateEngine = null;
-	
-	private String file;
-	
+		
 	private Map<String, Integer> header;
 	
 
